@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emotion Survey</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState } = React;
+
+        const EmotionSurvey = () => {
+            const [responses, setResponses] = useState({
+                anger: 50,
+                sadness: 50,
+                fear: 50,
+                disgust: 50,
+                surprise: 50,
+                neutral: 50,
+                happiness: 50,
+                qualitative: ''
+            });
+            
+            const [submitted, setSubmitted] = useState(false);
+            const [allResponses, setAllResponses] = useState([]);
+
+            const emotions = [
+                { name: 'anger', label: 'Anger', description: 'How angry do you feel right now?' },
+                { name: 'sadness', label: 'Sadness', description: 'How sad do you feel right now?' },
+                { name: 'fear', label: 'Fear', description: 'How fearful do you feel right now?' },
+                { name: 'disgust', label: 'Disgust', description: 'How disgusted do you feel right now?' },
+                { name: 'surprise', label: 'Surprise', description: 'How surprised do you feel right now?' },
+                { name: 'neutral', label: 'Neutral', description: 'How emotionally neutral do you feel right now?' },
+                { name: 'happiness', label: 'Happiness', description: 'How happy do you feel right now?' }
+            ];
+
+            const handleSliderChange = (emotion, event) => {
+                setResponses(prev => ({
+                    ...prev,
+                    [emotion]: parseInt(event.target.value)
+                }));
+            };
+
+            const handleTextChange = (event) => {
+                setResponses(prev => ({
+                    ...prev,
+                    qualitative: event.target.value
+                }));
+            };
+
+            const downloadCSV = (data) => {
+                const headers = ['timestamp', ...emotions.map(e => e.name), 'qualitative'];
+                const csvContent = [
+                    headers.join(','),
+                    ...data.map(response => {
+                        const values = [
+                            response.timestamp,
+                            ...emotions.map(e => response[e.name]),
+                            `"${response.qualitative.replace(/"/g, '""')}"`
+                        ];
+                        return values.join(',');
+                    })
+                ].join('\n');
+
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                const filename = `emotion_survey_${new Date().toISOString().slice(0,19).replace(/[:.]/g, '-')}.csv`;
+                
+                link.setAttribute('href', url);
+                link.setAttribute('download', filename);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            };
+
+            const handleSubmit = () => {
+                const newResponse = {
+                    ...responses,
+                    timestamp: new Date().toISOString()
+                };
+                const updatedResponses = [...allResponses, newResponse];
+                setAllResponses(updatedResponses);
+                setSubmitted(true);
+                downloadCSV(updatedResponses);
+            };
+
+            return (
+                <div className="max-w-2xl mx-auto p-4">
+                    <div className="bg-white shadow-lg rounded-lg p-6">
+                        <h1 className="text-2xl font-bold mb-6">Basic Emotions Survey</h1>
+                        
+                        <div className="space-y-6">
+                            {emotions.map(emotion => (
+                                <div key={emotion.name} className="space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-sm font-medium">{emotion.label}</label>
+                                        <span className="text-sm text-gray-500">{responses[emotion.name]}%</span>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="100"
+                                        value={responses[emotion.name]}
+                                        onChange={(e) => handleSliderChange(emotion.name, e)}
+                                        className="w-full"
+                                    />
+                                    <p className="text-sm text-gray-500">{emotion.description}</p>
+                                </div>
+                            ))}
+                            
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium block">Your Emotional Experience</label>
+                                <p className="text-sm text-gray-500">
+                                    Please provide a brief summary of the major emotions you regularly experience in your life at present.
+                                </p>
+                                <textarea
+                                    value={responses.qualitative}
+                                    onChange={handleTextChange}
+                                    className="w-full h-24 p-2 border rounded-md"
+                                    placeholder="Describe your regular emotional experiences..."
+                                />
+                            </div>
+
+                            <button 
+                                onClick={handleSubmit}
+                                disabled={submitted}
+                                className="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 disabled:bg-gray-300"
+                            >
+                                Submit Response
+                            </button>
+
+                            {submitted && (
+                                <div className="mt-4 p-4 bg-green-50 rounded-lg">
+                                    <h3 className="font-medium text-green-800">Response Recorded</h3>
+                                    <p className="text-sm text-green-600">Thank you for completing the survey.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            return (
+                <div className="min-h-screen bg-gray-100 py-8">
+                    <EmotionSurvey />
+                </div>
+            );
+        };
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
