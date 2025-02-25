@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Emotion Survey</title>
+    <title>Comprehensive Emotion and Cognitive Survey</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -13,65 +13,309 @@
     <div id="root"></div>
     
     <script type="text/babel">
-        const { useState } = React;
+        const { useState, useEffect } = React;
 
-        const EmotionSurvey = () => {
-            const [responses, setResponses] = useState({
-                anger: 50,
-                sadness: 50,
-                fear: 50,
-                disgust: 50,
-                surprise: 50,
-                neutral: 50,
-                happiness: 50,
-                qualitative: ''
+        // Survey Data
+        const surveys = {
+            emotionSurvey: {
+                title: "Basic Emotions Survey",
+                description: "Rate your current emotional state on the scales below.",
+                scaleType: "percentage", // 0-100%
+                questions: [
+                    { id: "anger", text: "How angry do you feel right now?", label: "Anger" },
+                    { id: "sadness", text: "How sad do you feel right now?", label: "Sadness" },
+                    { id: "fear", text: "How fearful do you feel right now?", label: "Fear" },
+                    { id: "disgust", text: "How disgusted do you feel right now?", label: "Disgust" },
+                    { id: "surprise", text: "How surprised do you feel right now?", label: "Surprise" },
+                    { id: "neutral", text: "How emotionally neutral do you feel right now?", label: "Neutral" },
+                    { id: "happiness", text: "How happy do you feel right now?", label: "Happiness" }
+                ],
+                qualitativePrompt: "Please provide a brief summary of the major emotions you regularly experience in your life at present."
+            },
+            needForCognition: {
+                title: "Need for Cognition Scale (18-item)",
+                description: "For each of the statements below, please indicate whether or not the statement is characteristic of you.",
+                scaleType: "likert5", // 1-5 Likert scale
+                scaleLabels: ["Extremely uncharacteristic", "Somewhat uncharacteristic", "Uncertain", "Somewhat characteristic", "Extremely characteristic"],
+                questions: [
+                    { id: "nfc1", text: "I would prefer complex to simple problems.", reverse: false },
+                    { id: "nfc2", text: "I like to have the responsibility of handling a situation that requires a lot of thinking.", reverse: false },
+                    { id: "nfc3", text: "Thinking is not my idea of fun.", reverse: true },
+                    { id: "nfc4", text: "I would rather do something that requires little thought than something that is sure to challenge my thinking abilities.", reverse: true },
+                    { id: "nfc5", text: "I try to anticipate and avoid situations where there is a likely chance I will have to think in depth about something.", reverse: true },
+                    { id: "nfc6", text: "I find satisfaction in deliberating hard and for long hours.", reverse: false },
+                    { id: "nfc7", text: "I only think as hard as I have to.", reverse: true },
+                    { id: "nfc8", text: "I prefer to think about small, daily projects to long-term ones.", reverse: true },
+                    { id: "nfc9", text: "I like tasks that require little thought once I've learned them.", reverse: true },
+                    { id: "nfc10", text: "The idea of relying on thought to make my way to the top appeals to me.", reverse: false },
+                    { id: "nfc11", text: "I really enjoy a task that involves coming up with new solutions to problems.", reverse: false },
+                    { id: "nfc12", text: "Learning new ways to think doesn't excite me very much.", reverse: true },
+                    { id: "nfc13", text: "I prefer my life to be filled with puzzles that I must solve.", reverse: false },
+                    { id: "nfc14", text: "The notion of thinking abstractly is appealing to me.", reverse: false },
+                    { id: "nfc15", text: "I would prefer a task that is intellectual, difficult, and important to one that is somewhat important but does not require much thought.", reverse: false },
+                    { id: "nfc16", text: "I feel relief rather than satisfaction after completing a task that required a lot of mental effort.", reverse: true },
+                    { id: "nfc17", text: "It's enough for me that something gets the job done; I don't care how or why it works.", reverse: true },
+                    { id: "nfc18", text: "I usually end up deliberating about issues even when they do not affect me personally.", reverse: false }
+                ]
+            },
+            fatigueSeverity: {
+                title: "Fatigue Severity Scale (FSS)",
+                description: "Below are statements about your level of fatigue. For each statement, please select a number from 1 to 7 that indicates your degree of agreement.",
+                scaleType: "likert7", // 1-7 Likert scale
+                scaleLabels: ["Strongly disagree", "", "", "Neither agree nor disagree", "", "", "Strongly agree"],
+                questions: [
+                    { id: "fss1", text: "My motivation is lower when I am fatigued." },
+                    { id: "fss2", text: "Exercise brings on my fatigue." },
+                    { id: "fss3", text: "I am easily fatigued." },
+                    { id: "fss4", text: "Fatigue interferes with my physical functioning." },
+                    { id: "fss5", text: "Fatigue causes frequent problems for me." },
+                    { id: "fss6", text: "My fatigue prevents sustained physical functioning." },
+                    { id: "fss7", text: "Fatigue interferes with carrying out certain duties and responsibilities." },
+                    { id: "fss8", text: "Fatigue is among my three most disabling symptoms." },
+                    { id: "fss9", text: "Fatigue interferes with my work, family, or social life." }
+                ]
+            },
+            cognitiveFailures: {
+                title: "Cognitive Failures Questionnaire (CFQ)",
+                description: "The following questions are about minor mistakes which everyone makes from time to time, but some of which happen more often than others. Please indicate how often these things have happened to you in the last 6 months.",
+                scaleType: "frequency5", // 0-4 frequency scale
+                scaleLabels: ["Never", "Very rarely", "Occasionally", "Quite often", "Very often"],
+                questions: [
+                    { id: "cfq1", text: "Do you read something and find you haven't been thinking about it and must read it again?" },
+                    { id: "cfq2", text: "Do you find you forget why you went from one part of the house to the other?" },
+                    { id: "cfq3", text: "Do you fail to notice signposts on the road?" },
+                    { id: "cfq4", text: "Do you find you confuse right and left when giving directions?" },
+                    { id: "cfq5", text: "Do you bump into people?" },
+                    { id: "cfq6", text: "Do you find you forget whether you've turned off a light or a fire or locked the door?" },
+                    { id: "cfq7", text: "Do you fail to listen to people's names when you are meeting them?" },
+                    { id: "cfq8", text: "Do you say something and realize afterwards that it might be taken as insulting?" },
+                    { id: "cfq9", text: "Do you fail to hear people speaking to you when you are doing something else?" },
+                    { id: "cfq10", text: "Do you lose your temper and regret it?" },
+                    { id: "cfq11", text: "Do you leave important letters unanswered for days?" },
+                    { id: "cfq12", text: "Do you find you forget which way to turn on a road you know well but rarely use?" },
+                    { id: "cfq13", text: "Do you fail to see what you want in a supermarket (although it's there)?" },
+                    { id: "cfq14", text: "Do you find yourself suddenly wondering whether you've used a word correctly?" },
+                    { id: "cfq15", text: "Do you have trouble making up your mind?" },
+                    { id: "cfq16", text: "Do you find you forget appointments?" },
+                    { id: "cfq17", text: "Do you forget where you put something like a newspaper or a book?" },
+                    { id: "cfq18", text: "Do you find you accidentally throw away the thing you want and keep what you meant to throw away?" },
+                    { id: "cfq19", text: "Do you daydream when you ought to be listening to something?" },
+                    { id: "cfq20", text: "Do you find you forget people's names?" },
+                    { id: "cfq21", text: "Do you start doing one thing at home and get distracted into doing something else?" },
+                    { id: "cfq22", text: "Do you find you can't quite remember something although it's 'on the tip of your tongue'?" },
+                    { id: "cfq23", text: "Do you find you forget what you came to the shops to buy?" },
+                    { id: "cfq24", text: "Do you drop things?" },
+                    { id: "cfq25", text: "Do you find you can't think of anything to say?" }
+                ]
+            },
+            zungDepression: {
+                title: "Zung Self-Rating Depression Scale",
+                description: "Please rate each of these statements according to how you have felt during the past week.",
+                scaleType: "frequency4", // 1-4 frequency scale
+                scaleLabels: ["A little of the time", "Some of the time", "Good part of the time", "Most of the time"],
+                questions: [
+                    { id: "zung1", text: "I feel down-hearted and blue.", reverse: false },
+                    { id: "zung2", text: "Morning is when I feel the best.", reverse: true },
+                    { id: "zung3", text: "I have crying spells or feel like crying.", reverse: false },
+                    { id: "zung4", text: "I have trouble sleeping at night.", reverse: false },
+                    { id: "zung5", text: "I eat as much as I used to.", reverse: true },
+                    { id: "zung6", text: "I still enjoy sex.", reverse: true },
+                    { id: "zung7", text: "I notice that I am losing weight.", reverse: false },
+                    { id: "zung8", text: "I have trouble with constipation.", reverse: false },
+                    { id: "zung9", text: "My heart beats faster than usual.", reverse: false },
+                    { id: "zung10", text: "I get tired for no reason.", reverse: false },
+                    { id: "zung11", text: "My mind is as clear as it used to be.", reverse: true },
+                    { id: "zung12", text: "I find it easy to do the things I used to do.", reverse: true },
+                    { id: "zung13", text: "I am restless and can't keep still.", reverse: false },
+                    { id: "zung14", text: "I feel hopeful about the future.", reverse: true },
+                    { id: "zung15", text: "I am more irritable than usual.", reverse: false },
+                    { id: "zung16", text: "I find it easy to make decisions.", reverse: true },
+                    { id: "zung17", text: "I feel that I am useful and needed.", reverse: true },
+                    { id: "zung18", text: "My life is pretty full.", reverse: true },
+                    { id: "zung19", text: "I feel that others would be better off if I were dead.", reverse: false },
+                    { id: "zung20", text: "I still enjoy the things I used to do.", reverse: true }
+                ]
+            }
+        };
+
+        // Main Survey Application Component
+        const SurveyApp = () => {
+            // State variables
+            const [participantId, setParticipantId] = useState("");
+            const [currentSurvey, setCurrentSurvey] = useState(null);
+            const [surveyResponses, setSurveyResponses] = useState({});
+            const [allCompleted, setAllCompleted] = useState(false);
+            const [surveyCompletion, setSurveyCompletion] = useState({
+                emotionSurvey: false,
+                needForCognition: false,
+                fatigueSeverity: false,
+                cognitiveFailures: false,
+                zungDepression: false
             });
-            
-            const [submitted, setSubmitted] = useState(false);
-            const [allResponses, setAllResponses] = useState([]);
 
-            const emotions = [
-                { name: 'anger', label: 'Anger', description: 'How angry do you feel right now?' },
-                { name: 'sadness', label: 'Sadness', description: 'How sad do you feel right now?' },
-                { name: 'fear', label: 'Fear', description: 'How fearful do you feel right now?' },
-                { name: 'disgust', label: 'Disgust', description: 'How disgusted do you feel right now?' },
-                { name: 'surprise', label: 'Surprise', description: 'How surprised do you feel right now?' },
-                { name: 'neutral', label: 'Neutral', description: 'How emotionally neutral do you feel right now?' },
-                { name: 'happiness', label: 'Happiness', description: 'How happy do you feel right now?' }
-            ];
+            // Initial setup of responses object
+            useEffect(() => {
+                const initialResponses = {};
+                
+                // Initialize emotion survey responses
+                initialResponses.emotionSurvey = {
+                    timestamp: null,
+                    responses: surveys.emotionSurvey.questions.reduce((acc, q) => {
+                        acc[q.id] = 50; // Default to middle value for emotion ratings
+                        return acc;
+                    }, {}),
+                    qualitative: ""
+                };
+                
+                // Initialize other surveys with empty responses
+                ["needForCognition", "fatigueSeverity", "cognitiveFailures", "zungDepression"].forEach(surveyId => {
+                    initialResponses[surveyId] = {
+                        timestamp: null,
+                        responses: surveys[surveyId].questions.reduce((acc, q) => {
+                            acc[q.id] = null; // No default selection
+                            return acc;
+                        }, {})
+                    };
+                });
+                
+                setSurveyResponses(initialResponses);
+            }, []);
 
-            const handleSliderChange = (emotion, event) => {
-                setResponses(prev => ({
+            // Check if all surveys are completed
+            useEffect(() => {
+                const allDone = Object.values(surveyCompletion).every(status => status === true);
+                setAllCompleted(allDone);
+            }, [surveyCompletion]);
+
+            // Handle participant ID changes
+            const handleParticipantIdChange = (e) => {
+                setParticipantId(e.target.value);
+            };
+
+            // Start a specific survey
+            const startSurvey = (surveyId) => {
+                setCurrentSurvey(surveyId);
+            };
+
+            // Handle responses to survey questions
+            const handleSurveyResponse = (questionId, value) => {
+                setSurveyResponses(prev => ({
                     ...prev,
-                    [emotion]: parseInt(event.target.value)
+                    [currentSurvey]: {
+                        ...prev[currentSurvey],
+                        responses: {
+                            ...prev[currentSurvey].responses,
+                            [questionId]: value
+                        }
+                    }
                 }));
             };
 
-            const handleTextChange = (event) => {
-                setResponses(prev => ({
+            // Handle qualitative responses (for emotion survey)
+            const handleQualitativeResponse = (value) => {
+                setSurveyResponses(prev => ({
                     ...prev,
-                    qualitative: event.target.value
+                    [currentSurvey]: {
+                        ...prev[currentSurvey],
+                        qualitative: value
+                    }
                 }));
             };
 
-            const downloadCSV = (data) => {
-                const headers = ['timestamp', ...emotions.map(e => e.name), 'qualitative'];
+            // Check if all questions in current survey are answered
+            const isCurrentSurveyComplete = () => {
+                if (!currentSurvey) return false;
+                
+                const currentResponses = surveyResponses[currentSurvey].responses;
+                
+                return Object.values(currentResponses).every(response => 
+                    response !== null && response !== undefined
+                );
+            };
+
+            // Submit current survey
+            const submitCurrentSurvey = () => {
+                if (isCurrentSurveyComplete()) {
+                    // Update timestamp
+                    const updatedResponses = {
+                        ...surveyResponses,
+                        [currentSurvey]: {
+                            ...surveyResponses[currentSurvey],
+                            timestamp: new Date().toISOString()
+                        }
+                    };
+                    
+                    setSurveyResponses(updatedResponses);
+                    
+                    // Update completion status
+                    setSurveyCompletion(prev => ({
+                        ...prev,
+                        [currentSurvey]: true
+                    }));
+                    
+                    // Return to survey selection
+                    setCurrentSurvey(null);
+                }
+            };
+
+            // Export all survey data as CSV files
+            const exportAllData = () => {
+                if (!participantId) {
+                    alert("Please enter a participant ID before exporting data.");
+                    return;
+                }
+                
+                // Export each survey as a separate CSV
+                Object.keys(surveys).forEach(surveyId => {
+                    exportSurveyAsCSV(surveyId);
+                });
+            };
+
+            // Export a single survey as CSV
+            const exportSurveyAsCSV = (surveyId) => {
+                const survey = surveys[surveyId];
+                const response = surveyResponses[surveyId];
+                
+                // Define headers based on survey type
+                let headers = ["participant_id", "timestamp"];
+                let rows = [];
+                
+                if (surveyId === "emotionSurvey") {
+                    // For emotion survey, include each emotion and qualitative response
+                    headers = [...headers, ...survey.questions.map(q => q.id), "qualitative"];
+                    
+                    const values = [
+                        participantId,
+                        response.timestamp || new Date().toISOString(),
+                        ...survey.questions.map(q => response.responses[q.id]),
+                        `"${response.qualitative.replace(/"/g, '""')}"`
+                    ];
+                    
+                    rows.push(values.join(','));
+                } else {
+                    // For other surveys, include each question response
+                    headers = [...headers, ...survey.questions.map(q => q.id)];
+                    
+                    const values = [
+                        participantId,
+                        response.timestamp || new Date().toISOString(),
+                        ...survey.questions.map(q => response.responses[q.id])
+                    ];
+                    
+                    rows.push(values.join(','));
+                }
+                
+                // Create CSV content
                 const csvContent = [
                     headers.join(','),
-                    ...data.map(response => {
-                        const values = [
-                            response.timestamp,
-                            ...emotions.map(e => response[e.name]),
-                            `"${response.qualitative.replace(/"/g, '""')}"`
-                        ];
-                        return values.join(',');
-                    })
+                    ...rows
                 ].join('\n');
-
+                
+                // Create and download file
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
-                const filename = `emotion_survey_${new Date().toISOString().slice(0,19).replace(/[:.]/g, '-')}.csv`;
+                const filename = `${surveyId}_${participantId}_${new Date().toISOString().slice(0,19).replace(/[:.]/g, '-')}.csv`;
                 
                 link.setAttribute('href', url);
                 link.setAttribute('download', filename);
@@ -81,78 +325,214 @@
                 URL.revokeObjectURL(url);
             };
 
-            const handleSubmit = () => {
-                const newResponse = {
-                    ...responses,
-                    timestamp: new Date().toISOString()
-                };
-                const updatedResponses = [...allResponses, newResponse];
-                setAllResponses(updatedResponses);
-                setSubmitted(true);
-                downloadCSV(updatedResponses);
+            // Render function for survey selection screen
+            const renderSurveySelection = () => {
+                return (
+                    <div className="bg-white shadow-lg rounded-lg p-6 max-w-4xl mx-auto">
+                        <h1 className="text-3xl font-bold mb-6 text-center">Survey Administration</h1>
+                        
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium mb-2">Participant ID:</label>
+                            <input
+                                type="text"
+                                value={participantId}
+                                onChange={handleParticipantIdChange}
+                                className="w-full p-2 border rounded-md"
+                                placeholder="Enter participant ID"
+                            />
+                        </div>
+                        
+                        <h2 className="text-xl font-semibold mb-4">Available Surveys</h2>
+                        <div className="space-y-4">
+                            {Object.entries(surveys).map(([surveyId, survey]) => (
+                                <div key={surveyId} className="border rounded-lg p-4 hover:bg-gray-50">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <h3 className="font-medium">{survey.title}</h3>
+                                            <p className="text-sm text-gray-500">{surveyCompletion[surveyId] ? "Completed" : "Not completed"}</p>
+                                        </div>
+                                        <button
+                                            onClick={() => startSurvey(surveyId)}
+                                            className={`px-4 py-2 rounded-md ${
+                                                surveyCompletion[surveyId] 
+                                                ? "bg-green-100 text-green-800" 
+                                                : "bg-blue-500 text-white hover:bg-blue-600"
+                                            }`}
+                                        >
+                                            {surveyCompletion[surveyId] ? "Review" : "Start"}
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        
+                        <div className="mt-8">
+                            <button
+                                onClick={exportAllData}
+                                disabled={!allCompleted || !participantId}
+                                className={`w-full py-3 rounded-md ${
+                                    allCompleted && participantId
+                                    ? "bg-green-500 text-white hover:bg-green-600" 
+                                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                }`}
+                            >
+                                Export All Survey Data
+                            </button>
+                            {!participantId && (
+                                <p className="text-sm text-red-500 mt-2">Please enter a participant ID.</p>
+                            )}
+                            {!allCompleted && participantId && (
+                                <p className="text-sm text-red-500 mt-2">Please complete all surveys first.</p>
+                            )}
+                        </div>
+                    </div>
+                );
             };
 
-            return (
-                <div className="max-w-2xl mx-auto p-4">
-                    <div className="bg-white shadow-lg rounded-lg p-6">
-                        <h1 className="text-2xl font-bold mb-6">Basic Emotions Survey</h1>
+            // Render function for emotion survey
+            const renderEmotionSurvey = () => {
+                const survey = surveys.emotionSurvey;
+                const responses = surveyResponses.emotionSurvey;
+                
+                return (
+                    <div className="bg-white shadow-lg rounded-lg p-6 max-w-4xl mx-auto">
+                        <h1 className="text-2xl font-bold mb-2">{survey.title}</h1>
+                        <p className="text-gray-600 mb-6">{survey.description}</p>
                         
                         <div className="space-y-6">
-                            {emotions.map(emotion => (
-                                <div key={emotion.name} className="space-y-2">
+                            {survey.questions.map(question => (
+                                <div key={question.id} className="space-y-2">
                                     <div className="flex justify-between items-center">
-                                        <label className="text-sm font-medium">{emotion.label}</label>
-                                        <span className="text-sm text-gray-500">{responses[emotion.name]}%</span>
+                                        <label className="text-sm font-medium">{question.label}</label>
+                                        <span className="text-sm text-gray-500">{responses.responses[question.id]}%</span>
                                     </div>
                                     <input
                                         type="range"
                                         min="0"
                                         max="100"
-                                        value={responses[emotion.name]}
-                                        onChange={(e) => handleSliderChange(emotion.name, e)}
+                                        value={responses.responses[question.id]}
+                                        onChange={(e) => handleSurveyResponse(question.id, parseInt(e.target.value))}
                                         className="w-full"
                                     />
-                                    <p className="text-sm text-gray-500">{emotion.description}</p>
+                                    <p className="text-sm text-gray-500">{question.text}</p>
                                 </div>
                             ))}
                             
-                            <div className="space-y-2">
+                            <div className="space-y-2 mt-8">
                                 <label className="text-sm font-medium block">Your Emotional Experience</label>
-                                <p className="text-sm text-gray-500">
-                                    Please provide a brief summary of the major emotions you regularly experience in your life at present.
-                                </p>
+                                <p className="text-sm text-gray-500">{survey.qualitativePrompt}</p>
                                 <textarea
                                     value={responses.qualitative}
-                                    onChange={handleTextChange}
+                                    onChange={(e) => handleQualitativeResponse(e.target.value)}
                                     className="w-full h-24 p-2 border rounded-md"
-                                    placeholder="Describe your regular emotional experiences..."
+                                    placeholder="Describe your emotional experiences..."
                                 />
                             </div>
 
-                            <button 
-                                onClick={handleSubmit}
-                                disabled={submitted}
-                                className="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 disabled:bg-gray-300"
-                            >
-                                Submit Response
-                            </button>
-
-                            {submitted && (
-                                <div className="mt-4 p-4 bg-green-50 rounded-lg">
-                                    <h3 className="font-medium text-green-800">Response Recorded</h3>
-                                    <p className="text-sm text-green-600">Thank you for completing the survey.</p>
-                                </div>
-                            )}
+                            <div className="flex justify-between mt-8">
+                                <button 
+                                    onClick={() => setCurrentSurvey(null)}
+                                    className="bg-gray-300 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-400"
+                                >
+                                    Back to Surveys
+                                </button>
+                                <button 
+                                    onClick={submitCurrentSurvey}
+                                    className="bg-blue-500 text-white py-2 px-6 rounded-md hover:bg-blue-600"
+                                >
+                                    Submit
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            );
+                );
+            };
+
+            // Render function for likert-type surveys
+            const renderLikertSurvey = () => {
+                if (!currentSurvey) return null;
+                
+                const survey = surveys[currentSurvey];
+                const responses = surveyResponses[currentSurvey];
+                
+                // Determine the number of scale points and labels
+                let scalePoints = 5;
+                if (survey.scaleType === "likert7") scalePoints = 7;
+                else if (survey.scaleType === "frequency4") scalePoints = 4;
+                
+                return (
+                    <div className="bg-white shadow-lg rounded-lg p-6 max-w-4xl mx-auto">
+                        <h1 className="text-2xl font-bold mb-2">{survey.title}</h1>
+                        <p className="text-gray-600 mb-6">{survey.description}</p>
+                        
+                        <div className="space-y-8">
+                            {survey.questions.map((question, index) => (
+                                <div key={question.id} className="border-b pb-6">
+                                    <p className="font-medium mb-3">{index + 1}. {question.text}</p>
+                                    
+                                    <div className="grid grid-cols-{scalePoints} gap-2">
+                                        {Array.from({ length: scalePoints }, (_, i) => (
+                                            <div key={i} className="flex flex-col items-center">
+                                                <button
+                                                    onClick={() => handleSurveyResponse(question.id, i + 1)}
+                                                    className={`w-8 h-8 rounded-full ${
+                                                        responses.responses[question.id] === i + 1
+                                                        ? 'bg-blue-500 text-white'
+                                                        : 'bg-gray-200 hover:bg-gray-300'
+                                                    }`}
+                                                >
+                                                    {i + 1}
+                                                </button>
+                                                {survey.scaleLabels && (
+                                                    <span className="text-xs text-center mt-1">
+                                                        {survey.scaleLabels[i]}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+
+                            <div className="flex justify-between mt-8">
+                                <button 
+                                    onClick={() => setCurrentSurvey(null)}
+                                    className="bg-gray-300 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-400"
+                                >
+                                    Back to Surveys
+                                </button>
+                                <button 
+                                    onClick={submitCurrentSurvey}
+                                    disabled={!isCurrentSurveyComplete()}
+                                    className={`py-2 px-6 rounded-md ${
+                                        isCurrentSurveyComplete()
+                                        ? "bg-blue-500 text-white hover:bg-blue-600" 
+                                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                    }`}
+                                >
+                                    Submit
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // Main render logic
+            if (!currentSurvey) {
+                return renderSurveySelection();
+            } else if (currentSurvey === "emotionSurvey") {
+                return renderEmotionSurvey();
+            } else {
+                return renderLikertSurvey();
+            }
         };
 
+        // App Component
         const App = () => {
             return (
                 <div className="min-h-screen bg-gray-100 py-8">
-                    <EmotionSurvey />
+                    <SurveyApp />
                 </div>
             );
         };
